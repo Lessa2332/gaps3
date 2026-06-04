@@ -7,10 +7,10 @@
     <style>
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #222; margin: 0; height: 100vh; font-family: sans-serif; touch-action: manipulation; }
         .container { background: #000; padding: 20px; border-radius: 20px; border: 4px solid #444; display: flex; flex-direction: column; align-items: center; }
-        .light { width: 80px; height: 80px; border-radius: 50%; margin: 10px; background: #333; transition: 0.2s; }
-        .red.active { background: #ff0000; box-shadow: 0 0 30px #ff0000; }
-        .yellow.active { background: #ffff00; box-shadow: 0 0 30px #ffff00; }
-        .green.active { background: #00ff00; box-shadow: 0 0 30px #00ff00; }
+        .light { width: 80px; height: 80px; border-radius: 50%; margin: 10px; background: #333; transition: 0.2s; border: 2px solid #555; }
+        .red.active { background: #ff0000; box-shadow: 0 0 30px #ff0000; border-color: #fff; }
+        .yellow.active { background: #ffff00; box-shadow: 0 0 30px #ffff00; border-color: #fff; }
+        .green.active { background: #00ff00; box-shadow: 0 0 30px #00ff00; border-color: #fff; }
         #timer-box { width: 80px; height: 50px; background: #111; border: 2px solid #555; 
                      border-radius: 10px; margin-top: 15px; display: flex; align-items: center; 
                      justify-content: center; color: #00ff00; font-size: 30px; font-weight: bold; }
@@ -27,13 +27,11 @@
 
     <script>
         let isRunning = false;
-        // Ініціалізація аудіо з перевіркою підтримки
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const audioCtx = new AudioContext();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+        // 1. Функція звуку "цок-цок"
         function playClick(freq) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
@@ -44,18 +42,20 @@
             osc.stop(audioCtx.currentTime + 0.1);
         }
 
+        // 2. Функція голосу
         function speak(text) {
-            window.speechSynthesis.cancel(); // Зупиняємо попередній голос
+            window.speechSynthesis.cancel(); // Перериваємо поточну мову, якщо вона йде
             const speech = new SpeechSynthesisUtterance(text);
             speech.lang = 'uk-UA';
+            speech.volume = 1;
             window.speechSynthesis.speak(speech);
         }
 
         function activate(color) {
-            if (isRunning) return;
+            if (isRunning && color !== 'red') return; // Дозволяємо перервати червоним
             
-            // "Розблокування" аудіо для мобільних браузерів при першому кліку
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            // Зупинка таймера, якщо користувач натиснув інший колір
+            if (window.timerInterval) clearInterval(window.timerInterval);
             
             isRunning = true;
             
@@ -66,27 +66,30 @@
             if (color === 'red') {
                 timerDisplay.innerText = "--";
                 speak('Червоний. Стоп, заборонено!');
-                setTimeout(() => isRunning = false, 2000);
+                setTimeout(() => isRunning = false, 1500);
             } else if (color === 'yellow') {
                 timerDisplay.innerText = "--";
                 speak('Жовтий. Увага, приготуйся!');
-                setTimeout(() => isRunning = false, 2000);
+                setTimeout(() => isRunning = false, 1500);
             } else {
                 speak('Зелений. Рух продовжуй!');
                 let timeLeft = 10;
                 
-                let interval = setInterval(() => {
-                    timerDisplay.innerText = timeLeft;
-                    playClick(timeLeft > 5 ? 600 : 800);
-                    
-                    if (timeLeft <= 5 && timeLeft > 0) {
-                        setTimeout(() => playClick(900), 500); // Прискорений звук "цок"
-                    }
-                    
+                timerDisplay.innerText = timeLeft;
+                
+                window.timerInterval = setInterval(() => {
                     timeLeft--;
                     
-                    if (timeLeft < 0) {
-                        clearInterval(interval);
+                    if (timeLeft >= 0) {
+                        timerDisplay.innerText = timeLeft;
+                        // Основний цок
+                        playClick(600);
+                        // Додатковий швидкий цок після 5 секунд
+                        if (timeLeft < 5) {
+                            setTimeout(() => playClick(800), 400);
+                        }
+                    } else {
+                        clearInterval(window.timerInterval);
                         document.getElementById('greenLight').classList.remove('active');
                         timerDisplay.innerText = "--";
                         isRunning = false;
