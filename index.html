@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Світлофор</title>
+    <title>Traffic Light</title>
     <style>
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #222; margin: 0; height: 100vh; font-family: sans-serif; }
         .container { background: #000; padding: 20px; border-radius: 20px; border: 4px solid #444; display: flex; flex-direction: column; align-items: center; }
@@ -16,22 +16,27 @@
 <body>
 
     <div class="container">
-        <div class="light red" id="redLight" onclick="activate('red')"></div>
-        <div class="light yellow" id="yellowLight" onclick="activate('yellow')"></div>
-        <div class="light green" id="greenLight" onclick="activate('green')"></div>
+        <div class="light red" id="redLight" onclick="startSystem('red')"></div>
+        <div class="light yellow" id="yellowLight" onclick="startSystem('yellow')"></div>
+        <div class="light green" id="greenLight" onclick="startSystem('green')"></div>
         <div id="timer-box">--</div>
     </div>
 
     <script>
-        // Створюємо звук за допомогою вбудованого об'єкта Audio
-        // Це коротка генерація звуку "пік" (Base64), яка не потребує окремого файлу
-        const tickSound = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
-        
+        let audioCtx;
         let isRunning = false;
 
-        function playTick() {
-            tickSound.currentTime = 0;
-            tickSound.play().catch(e => console.log("Звук заблоковано браузером, клікніть будь-де на сторінці"));
+        // Функція "цок" (синтез звуку)
+        function playClick(freq) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = freq;
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
         }
 
         function speak(text, lang) {
@@ -41,9 +46,10 @@
             window.speechSynthesis.speak(speech);
         }
 
-        function activate(color) {
-            // Щоб звук запрацював на 100%, браузер потребує, щоб ми "ініціалізували" аудіо після першого кліку
-            tickSound.play().catch(() => {}); 
+        function startSystem(color) {
+            // Обов'язкове розблокування звуку
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
 
             if (isRunning && color !== 'red') return;
             if (window.timerInterval) clearInterval(window.timerInterval);
@@ -61,7 +67,7 @@
                     timeLeft--;
                     if (timeLeft >= 0) {
                         document.getElementById('timer-box').innerText = timeLeft;
-                        playTick(); // Тепер це спрацює стабільно
+                        playClick(600); // Звук цокання
                     } else {
                         clearInterval(window.timerInterval);
                         isRunning = false;
