@@ -6,13 +6,15 @@
     <title>Пішохідний Світлофор</title>
     <style>
         body { display: flex; flex-direction: column; align-items: center; background: #222; margin: 0; padding-top: 20px; font-family: sans-serif; }
-        .container { background: #000; padding: 20px; border-radius: 20px; }
+        .container { background: #000; padding: 20px; border-radius: 20px; border: 4px solid #444; }
         .light { width: 100px; height: 100px; border-radius: 50%; margin: 10px; background: #333; }
+        .red.active { background: #ff0000; box-shadow: 0 0 30px #ff0000; }
+        .green.active { background: #00ff00; box-shadow: 0 0 30px #00ff00; }
         
-        .red.active { background: red; box-shadow: 0 0 30px red; }
-        .green.active { background: green; box-shadow: 0 0 30px green; }
-        
-        #timer { color: white; font-size: 48px; margin-top: 20px; font-weight: bold; height: 60px; }
+        /* Секція таймера */
+        #timer-box { width: 100px; height: 60px; background: #111; border: 2px solid #555; 
+                     border-radius: 10px; margin-top: 15px; display: flex; align-items: center; 
+                     justify-content: center; color: #ff3300; font-size: 40px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -20,17 +22,28 @@
     <div class="container">
         <div class="light red" id="redLight" onclick="activate('red')"></div>
         <div class="light green" id="greenLight" onclick="activate('green')"></div>
+        <div id="timer-box">--</div>
     </div>
-    <div id="timer"></div>
 
     <script>
-        let countdown;
         let isRunning = false;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        function speak(text, rate = 1) {
+        // Функція для створення звуку "цок"
+        function playClick(freq) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = freq;
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function speak(text) {
             const speech = new SpeechSynthesisUtterance(text);
             speech.lang = 'uk-UA';
-            speech.rate = rate; // швидкість мовлення
             window.speechSynthesis.speak(speech);
         }
 
@@ -40,27 +53,27 @@
             
             document.querySelectorAll('.light').forEach(el => el.classList.remove('active'));
             document.getElementById(color + 'Light').classList.add('active');
+            const timerDisplay = document.getElementById('timer-box');
 
             if (color === 'red') {
+                timerDisplay.innerText = "--";
                 speak('Червоний. Стоп, заборонено!');
-                isRunning = false;
+                setTimeout(() => isRunning = false, 2000);
             } else {
-                let timeLeft = 10;
-                const timerDisplay = document.getElementById('timer');
-                
                 speak('Зелений. Рух продовжуй!');
-
-                countdown = setInterval(() => {
+                let timeLeft = 10;
+                
+                let interval = setInterval(() => {
+                    timerDisplay.innerText = timeLeft;
+                    
+                    // Звук цок-цок (пришвидшується після 5 секунд)
+                    playClick(timeLeft > 5 ? 400 : 800);
+                    
                     timeLeft--;
-                    timerDisplay.innerText = timeLeft > 0 ? timeLeft : "";
-
-                    if (timeLeft === 5) {
-                        speak('Поспішай, зелений закінчується!', 1.5); // пришвидшений голос
-                    }
-
-                    if (timeLeft <= 0) {
-                        clearInterval(countdown);
+                    if (timeLeft < 0) {
+                        clearInterval(interval);
                         document.getElementById('greenLight').classList.remove('active');
+                        timerDisplay.innerText = "--";
                         isRunning = false;
                     }
                 }, 1000);
