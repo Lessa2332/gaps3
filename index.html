@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Центр Географічного Контролю 7 // Географічна оболонка</title>
+    <style>
+        :root {
+            --dark-panel: #1e293b;
+            --desk-bg: #0f172a;
+            --paper-bg: #f8fafc;
+            --stamp-green: #10b981;
+            --stamp-red: #ef4444;
+            --text-main: #334155;
+            --accent-blue: #3b82f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--desk-bg);
+            color: #f1f5f9;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 720px;
+            background: var(--dark-panel);
+            border: 4px solid #334155;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+
+        /* Upper Inspector Panel */
+        .header-panel {
+            text-align: center;
+            border-bottom: 2px dashed #475569;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header-panel h1 { margin: 5px 0; font-size: 1.6rem; color: #60a5fa; letter-spacing: 1px; }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            background: #111827;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #4ade80;
+        }
+
+        /* Game steps */
+        .game-step { display: none; }
+        .game-step.active { display: block; animation: slideIn 0.3s ease-out; }
+
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Workspace (Papers, Please style) */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        @media (min-width: 550px) {
+            .workspace { grid-template-columns: 1.2fr 1fr; }
+        }
+
+        /* Document Card */
+        .document-card {
+            background: var(--paper-bg);
+            color: var(--text-main);
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 5px 5px 0px #000;
+            border-left: 8px solid #cbd5e1;
+            position: relative;
+        }
+        .document-card h3 { margin-top: 0; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; font-size: 1rem; }
+        .doc-text { font-style: italic; font-size: 0.95rem; line-height: 1.4; background: #fff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 4px; }
+
+        /* Manual Card */
+        .manual-card {
+            background: #1e293b;
+            border: 2px solid #475569;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        .manual-card strong { color: #fba518; display: block; margin-bottom: 5px; }
+
+        /* Stamp buttons */
+        .stamp-zone {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .btn-stamp {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 3px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stamp-approve {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--stamp-green);
+            border-color: var(--stamp-green);
+        }
+        .stamp-approve:hover { background: var(--stamp-green); color: white; transform: scale(1.03); }
+        
+        .stamp-deny {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--stamp-red);
+            border-color: var(--stamp-red);
+        }
+        .stamp-deny:hover { background: var(--stamp-red); color: white; transform: scale(1.03); }
+
+        /* Login box */
+        .login-box { background: #111827; padding: 20px; border-radius: 12px; border: 1px solid #374151; }
+        .login-box select {
+            width: 100%; padding: 12px; margin: 10px 0 20px 0;
+            border-radius: 8px; border: 2px solid #475569; background: #1f2937; color: white; font-size: 1rem;
+        }
+        .btn-start {
+            width: 100%; background: var(--accent-blue); color: white; border: none;
+            padding: 15px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer;
+        }
+
+        /* End screen */
+        .result-screen { text-align: center; display: none; }
+        .feedback-box { background: #1e293b; padding: 20px; border-radius: 12px; margin-top: 15px; text-align: left; border-left: 5px solid var(--stamp-green); }
+
+        .loader { display: none; text-align: center; color: var(--accent-blue); font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="header-panel">
+        <h1>🔍 МИТНИЦЯ ГЕО-КОНТРОЛЮ</h1>
+        <div class="status-bar">
+            <span id="station-info">ПОСТ: ПРИРОДНІ КОМПЛЕКСИ СВІТУ</span>
+            <span id="progress-info">ДОКУМЕНТ: РЕЄСТРАЦІЯ</span>
+        </div>
+    </div>
+
+    <div id="step-login" class="game-step active">
+        <div class="login-box">
+            <h2 style="margin-top:0; color: #fba518; font-size: 1.2rem;">🔐 Авторизація нового інспектора:</h2>
+            <label>Оберіть ваш клас:</label>
+            <select id="studentClass" onchange="loadNames()" required>
+                <option value="">-- Оберіть клас --</option>
+                <option value="7-А">7-А</option>
+                <option value="7-Б">7-Б</option>
+                <option value="7-В">7-В</option>
+                <option value="7-Г">7-Г</option>
+                <option value="7-Д">7-Д</option>
+            </select>
+
+            <label>Знайдіть своє прізвище у базі:</label>
+            <select id="studentName" required>
+                <option value="">-- Спочатку вкажіть клас --</option>
+            </select>
+            
+            <button type="button" class="btn-start" onclick="startGameShift()">ПОЧАТИ РОБОЧУ ЗМІНУ ➔</button>
+        </div>
+    </div>
+
+    <div id="step-doc1" class="game-step">
+        <div class="workspace">
+            <div class="document-card">
+                <h3>📄 ОПЕРАТИВНИЙ ЗВІТ: КАРТА ПРИРОДНИХ ЗОН</h3>
+                <p class="doc-text">
+                    "Аналізуючи карту природних поясів та зон світу, наша дослідницька група встановила: <strong>межі всіх природних зон на материках завжди чітко збігаються з лініями паралелей</strong> від океану до океану і ніколи від них не відхиляються."
+                </p>
+            </div>
+            <div class="manual-card">
+                <strong>📖 ДОВІДНИК МИТНИКА:</strong>
+                Картографічна помилка! На поширення зон впливає не лише тепло (широта), а й зволоження, океанічні течії та рельєф. Тому лінії природних зон часто відхиляються або витягуються вздовж узбереж та гір.
+            </div>
+        </div>
+        <div class="stamp-zone">
+            <button class="btn-stamp stamp-approve" onclick="processDecision(1, 'APPROVE')">🟩 Схвалити</button>
+            <button class="btn-stamp stamp-deny" onclick="processDecision(1, 'DENY')">🟥 Відхилити</button>
+        </div>
+    </div>
+
+    <div id="step-doc2" class="game-step">
+        <div class="workspace">
+            <div class="document-card">
+                <h3>🛂 ПАСПОРТ ЕКОСИСТЕМНОГО ОБ'ЄКТА</h3>
+                <p class="doc-text">
+                    "Об'єкт: <strong>Географічна оболонка Землі</strong>. Опис структури: це найбільший природний комплекс, компоненти якого (літосфера, атмосфера, гідросфера, біосфера) <strong>є повністю автономними й розвиваються ізольовано, ніяк не впливаючи один на одного</strong>."
+                </p>
+            </div>
+            <div class="manual-card">
+                <strong>📖 ДОВІДНИК МИТНИКА:</strong>
+                Помилка у визначенні! Географічна оболонка підпорядкована закону <strong>цілісності</strong>. Всі її оболонки взаємопроникають, взаємодіють та обмінюються речовиною. Ізольованого розвитку компонентів не існує!
+            </div>
+        </div>
+        <div class="stamp-zone">
+            <button class="btn-stamp stamp-approve" onclick="processDecision(2, 'APPROVE')">🟩 Схвалити</button>
+            <button class="btn-stamp stamp-deny" onclick="processDecision(2, 'DENY')">🟥 Відхилити</button>
+        </div>
+    </div>
+
+    <div id="step-doc3" class="game-step">
+        <div class="workspace">
+            <div class="document-card">
+                <h3>📊 КЛАСИФІКАЦІЯ КЛІМАТИЧНИХ ЗАКОНОМІРНОСТЕЙ</h3>
+                <p class="doc-text">
+                    "Під час групового дослідження високих гірських систем (Гімалаї, Анди) було зафіксовано класичний прояв <strong>широтної зональності у горах</strong>: з висотою температури падають, через що природні комплекси змінюються від підніжжя до вершин."
+                </p>
+            </div>
+            <div class="manual-card">
+                <strong>📖 ДОВІДНИК МИТНИКА:</strong>
+                Помилка у термінології! Зміна природних зон від підніжжя до вершин у горах — це <strong>висотна (вертикальна) поясність</strong>. А широтна зональність спостерігається лише на рівнинних просторах у напрямку від екватора до полюсів.
+            </div>
+        </div>
+        <div class="stamp-zone">
+            <button class="btn-stamp stamp-approve" onclick="processDecision(3, 'APPROVE')">🟩 Схвалити</button>
+            <button class="btn-stamp stamp-deny" onclick="processDecision(3, 'DENY')">🟥 Відхилити</button>
+        </div>
+    </div>
+
+    <div id="step-doc4" class="game-step">
+        <div class="workspace">
+            <div class="document-card">
+                <h3>🏗️ ЕКОЛОГІЧНИЙ ДОЗВІЛ НА ЛАНДШАФТНІ ЗМІНИ</h3>
+                <p class="doc-text">
+                    "Проєкт масштабного вирубування лісових масивів у межах помірного природного поясу. Оскільки компоненти ландшафту не пов'язані, <strong>знищення дерев ніяк не трансформує інші складові: рівень ґрунтових вод, клімат і тваринний світ залишаться без змін</strong>."
+                </p>
+            </div>
+            <div class="manual-card">
+                <strong>📖 ДОВІДНИК МИТНИКА:</strong>
+                Порушення цілісності природи! Трансформація одного компонента викликає ланцюгову реакцію. Вирубування лісів неминуче веде до обміління річок, висушування клімату, руйнування ґрунтів та зникнення тварин.
+            </div>
+        </div>
+        <div class="stamp-zone">
+            <button class="btn-stamp stamp-approve" onclick="processDecision(4, 'APPROVE')">🟩 Схвалити</button>
+            <button class="btn-stamp stamp-deny" onclick="processDecision(4, 'DENY')">🟥 Відхилити</button>
+        </div>
+    </div>
+
+    <div id="step-eval" class="game-step">
+        <div class="login-box">
+            <h2 style="margin-top:0; color: #fba518; font-size: 1.1rem;">📝 ЗАКЛЮЧНИЙ ЗВІТ ЗМІНИ (Самооцінювання)</h2>
+            <p style="font-size: 0.95rem; color: #94a3b8;">Оціни чесно, як тобі далося керування географічними картами, масштабами та аналіз документів плитами планети:</p>
+            <select id="selfEval" required>
+                <option value="">Оберіть варіант...</option>
+                <option value="Впевнено">😎 Почуваюся впевнено, закони геооболонки та зон знаю!</option>
+                <option value="Частково">😐 Деякі закономірності зональності заплутали, треба заглянути в атлас</option>
+                <option value="Потребую підтримки">❓ Важко аналізувати природні комплекси й карти зон, потрібен штурман</option>
+            </select>
+            <button type="button" class="btn-start" style="background: #10b981;" onclick="submitGameData()">ЗАВЕРШИТИ ЗМІНУ ТА НАДІСЛАТИ В ШТАБ ➔</button>
+        </div>
+    </div>
+
+    <div id="loader" class="loader">⚙️ Шифрування даних та відправка капітану...</div>
+    
+    <div id="resultScreen" class="result-screen">
+        <h2 style="color: #4ade80;">🎉 ЗМІНУ УСПІШНО ЗАВЕРШЕНО!</h2>
+        <p>Ваші інспекторські рішення надіслано в головну базу даних вчителя.</p>
+        <div id="feedbackBox" class="feedback-box"></div>
+    </div>
+</div>
+
+<script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSs8W9HKolC2aAP8zIvfMtjRc4iVi6nf-sRxow1B5ov-uU23xlU2aW_zi3UxkXaU93/exec"; 
+
+    // База даних учнів 7-х класів
+    const studentsDb = {
+        "7-А": [
+            "Ашихмін Ярослав", "Внуков Веніамін", "Волков Давид", "Вулєр Іван", "Дабіжа Марія",
+            "Димитров Дмитро", "Кирилюк Артем", "Косар Нікіта", "Кравчук Мілана", "Кривенок Ілля",
+            "Лазаревич Георгій", "Лазаревич Ніколь", "Лісіцина Дар'я", "Нестерова Varvara", "Перванчук Марк",
+            "Полуянов Семен", "Попков Андрій", "Савченко Наталія", "Скопенко Ніка", "Усольцева Аріна",
+            "Халабура Вікторія", "Химич Артем", "Якутенко Володимир", "Ященко Анастасія", "Бохонок Олеся"
+        ],
+        "7-Б": [
+            "Алєксєюк Ірина", "Андрусік Ул'яна", "Болясна Аріна", "Войтех Богдан", "Голімбовська Єлизавета",
+            "Гуляєва Марія", "Зєнов Геннадій", "Кожухар Злата", "Колесниченко Артем", "Коростельова Анфіса",
+            "Кузьмін Дмитро", "Левченко Тимур", "Литовченко Кіра", "Михайлова Ксенія", "Ніколаєв Ілля",
+            "Ніща Дар'я", "Переберін Артем", "Сич Кіріл", "Сташко Кароліна", "Стерпул Олександр",
+            "Харченко Гліб", "Хомутова Анна", "Чернюк Андрій", "Шаріпова Анастасія", "Штурхаль Марія",
+            "Яремчук Єгор", "Бохонок Олеся"
+        ],
+        "7-В": [
+            "Бєгу Євгеній", "Білоус Катерина", "Бодьо Арина", "Величко Данило", "Гаврилова Кира",
+            "Гаврилова Маргарита", "Гєчева Вероніка", "Гордієнко Дмитро", "Іваньоха Мирослав", "Ісхаков Кирило",
+            "Кушнір Віталіна", "Левченко Олександр", "Мацієвич Дмитро", "Мельниченко Анастасія", "Муравйов Андрій",
+            "Ніколайчук Іван", "Остапчук Ангеліна", "Охват Софія", "Пєшкова Поліна", "Піроженко Анна",
+            "Саванчук Крістіна", "Чермних Єгор", "Бохонок Олеся"
+        ],
+        "7-Г": [
+            "Баличев Давід", "Білоножкіна Вікторія", "Бохонок Олеся", "Григор'єв Максим", "Єленич Софія",
+            "Жемчужникова Дар'я", "Карп Христина", "Карташов Михайло", "Клименко Назар", "Ковальов Володимир",
+            "Маслій Руслан", "Мельников Тимур", "Потребенко Меланія", "Раєнко Таїсія", "Саранін Олександр",
+            "Солодухіна Жанна", "Сопель Максим", "Стоянов Владислав", "Чеховський Кирило", "Чорний Акім",
+            "Шеремет Ернест"
+        ],
+        "7-Д": [
+            "Балинський Вячеслав", "Бохонок Олеся", "Бурлак Аміна", "Ганошенко Маттіа", "Грозивчак Олександр",
+            "Дойчева Ангеліна", "Касьянова Аріна", "Кербенко Артем", "Ковальчук Глєб", "Лебін Ярослав",
+            "Маслаков Артем", "Масленніков Іван", "Михайловська Катерина", "Перепьолка Таїсія", "Петрова Аріна",
+            "Прокопенко Ярослав", "Семенов Семен", "Ткаченко Демір"
+        ]
+    };
+
+    let playerAnswers = { q1: 0, q2: 0, q3: 0, q4: 0 };
+
+    if (!localStorage.getItem('geo_device_token')) {
+        localStorage.setItem('geo_device_token', 'dev_' + Math.random().toString(36).substr(2, 9));
+    }
+    const deviceToken = localStorage.getItem('geo_device_token');
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if (localStorage.getItem('geo_topic1_submitted') === 'true') {
+            showLockScreen();
+        }
+    });
+
+    function loadNames() {
+        const classVal = document.getElementById("studentClass").value;
+        const nameSelect = document.getElementById("studentName");
+        nameSelect.innerHTML = '<option value="">-- Знайди себе --</option>';
+        if (classVal && studentsDb[classVal]) {
+            studentsDb[classVal].forEach(name => {
+                let op = document.createElement("option");
+                op.value = name; op.text = name;
+                nameSelect.appendChild(op);
+            });
+        }
+    }
+
+    function startGameShift() {
+        const cls = document.getElementById("studentClass").value;
+        const nm = document.getElementById("studentName").value;
+        if(!cls || !nm) { alert("⚠️ Доступ заблоковано! Оберіть Клас та Ім'я."); return; }
+        
+        document.getElementById("step-login").classList.remove("active");
+        document.getElementById("step-doc1").classList.add("active");
+        document.getElementById("progress-info").innerText = "ДОКУМЕНТ 1 / 4";
+    }
+
+    function processDecision(stepNum, decision) {
+        // Логіка оцінювання рішень (правильні відповіді мають бути DENY, бо всі документи з помилками)
+        let score = 0;
+        if (stepNum === 1 && decision === 'DENY') score = 100; // Помилка карт природних зон
+        if (stepNum === 2 && decision === 'DENY') score = 100; // Помилка цілісності ГО
+        if (stepNum === 3 && decision === 'DENY') score = 100; // Помилка зональності/поясності
+        if (stepNum === 4 && decision === 'DENY') score = 100; // Помилка трансформації ландшафтів
+
+        playerAnswers['q' + stepNum] = score;
+
+        document.getElementById("step-doc" + stepNum).classList.remove("active");
+        
+        if (stepNum < 4) {
+            let next = stepNum + 1;
+            document.getElementById("step-doc" + next).classList.add("active");
+            document.getElementById("progress-info").innerText = "ДОКУМЕНТ " + next + " / 4";
+        } else {
+            document.getElementById("step-eval").classList.add("active");
+            document.getElementById("progress-info").innerText = "БОРТОВИЙ ЖУРНАЛ";
+        }
+    }
+
+    function submitGameData() {
+        const evalVal = document.getElementById("selfEval").value;
+        if (!evalVal) { alert("Будь ласка, заповніть фінальну самооцінку."); return; }
+
+        document.getElementById("step-eval").classList.remove("active");
+        document.getElementById("loader").style.display = "block";
+
+        // Формуємо результати за трьома групами (ГР) відповідно до вимог НУШ
+        const scoreGR2 = playerAnswers.q1; // Аналіз тематичних карт
+        const scoreGR1 = playerAnswers.q2; // Розуміння географічних понять та критичне мислення
+        const scoreGR3 = Math.round((playerAnswers.q3 + playerAnswers.q4) / 2); // Закономірності та цілісність природи
+        const totalScore = Math.round((scoreGR1 + scoreGR2 + scoreGR3) / 3);
+
+        let gaps = [];
+        if (playerAnswers.q1 === 0) gaps.push("ГР2_Аналіз_карт_природних_зон");
+        if (playerAnswers.q2 === 0) gaps.push("ГР1_Поняття_географічної_оболонки");
+        if (playerAnswers.q3 === 0) gaps.push("ГР3_Широтна_зональність_та_висотна_поясність");
+        if (playerAnswers.q4 === 0) gaps.push("ГР3_Цілісність_і_трансформація_природних_комплексів");
+
+        const payload = {
+            studentName: document.getElementById('studentName').value,
+            studentClass: document.getElementById('studentClass').value,
+            totalScore: totalScore,
+            scoreGR1: scoreGR1,
+            scoreGR2: scoreGR2,
+            scoreGR3: scoreGR3,
+            gaps: gaps,
+            selfEvaluation: evalVal,
+            deviceToken: deviceToken
+        };
+
+        let resultText = `<strong>Офіційний рапорт екіпажу:</strong><br><br>`;
+        resultText += `👤 Інспектор: <strong>${payload.studentName}</strong> (${payload.studentClass})<br>`;
+        resultText += `📊 Успішність перевірки: <strong>${totalScore}% точних рішень</strong>.<br><br>`;
+        resultText += `🌟 <strong>Статус:</strong> Зміну здано. Твої аналітичні навички допоможуть команді у розумінні закономірностей розвитку географічної оболонки та природних комплексів материків!`;
+        
+        document.getElementById("feedbackBox").innerHTML = resultText;
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('loader').style.display = 'none';
+            if (data.result === 'already_exists') {
+                alert('Результати цієї зміни вже зафіксовані в системі.');
+                showLockScreen();
+            } else {
+                localStorage.setItem('geo_topic1_submitted', 'true');
+                document.getElementById('resultScreen').style.display = 'block';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('resultScreen').style.display = 'block';
+        });
+    }
+
+    function showLockScreen() {
+        document.getElementById('step-login').style.display = 'none';
+        document.getElementById('step-doc1').style.display = 'none';
+        document.getElementById('step-doc2').style.display = 'none';
+        document.getElementById('step-doc3').style.display = 'none';
+        document.getElementById('step-doc4').style.display = 'none';
+        document.getElementById('step-eval').style.display = 'none';
+        document.getElementById('resultScreen').style.display = 'block';
+        document.getElementById('resultScreen').innerHTML = `<h2 style="color:var(--stamp-red);">🛃 РОБОЧУ ЗМІНУ ЗАКРИТО</h2><p>Ваш пристрій уже передав звіт контролю для цієї теми. Повторний доступ обмежено.</p>`;
+    }
+</script>
+
+</body>
+</html>
+
